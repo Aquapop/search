@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期刊检索工具</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="8" fill="#0066CC"/>
+                    <path d="M10 10H30V14H10V10Z" fill="white"/>
+                    <path d="M10 16H30V20H10V16Z" fill="white"/>
+                    <path d="M10 22H30V26H10V22Z" fill="white"/>
+                    <path d="M15 28H25V32H15V28Z" fill="white"/>
+                </svg>
+                <h1>期刊检索工具</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#" class="active">检索</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h2>期刊检索工具</h2>
+                <p>帮助您找到发表相关研究的期刊，并提供期刊指标和代表性文献分析</p>
+            </div>
+        </section>
+
+        <section class="search-section">
+            <div class="container">
+                <div class="cards">
+                    <div class="card">
+                        <h3><i class="fas fa-search"></i> 第一步：数据输入</h3>
+                        <div class="card-content">
+                            <div class="input-group">
+                                <label for="search-method">选择数据来源：</label>
+                                <select id="search-method">
+                                    <option value="api">通过API检索</option>
+                                    <option value="file">上传文献数据文件</option>
+                                </select>
+                            </div>
+                            
+                            <div id="api-search-container">
+                                <div class="input-group">
+                                    <label for="database">选择数据库：</label>
+                                    <select id="database">
+                                        <option value="pubmed">PubMed</option>
+                                        <option value="scopus">Scopus</option>
+                                        <option value="wos">Web of Science</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="keywords">检索关键词：</label>
+                                    <input type="text" id="keywords" value='cardiovascular disease' placeholder="输入检索关键词">
+                                </div>
+                                <div class="input-group">
+                                    <label for="field">检索字段：</label>
+                                    <select id="field">
+                                        <option value="title_abs">标题/摘要</option>
+                                        <option value="journal">期刊名</option>
+                                        <option value="all">全部字段</option>
+                                    </select>
+                                </div>
+                                <div class="button-group">
+                                    <button id="search-btn" class="btn primary">开始检索</button>
+                                    <button id="process-file-btn" class="btn primary" style="display: none;">处理文件</button>
+                                </div>
+                            </div>
+                            
+                            <div id="file-upload-container" style="display:none;">
+                                <div class="input-group">
+                                    <label for="file-upload">上传数据文件：</label>
+                                    <input type="file" id="file-upload" accept=".csv, .xlsx, .xls, .txt, .ris">
+                                    <p class="help-text">支持CSV、Excel、RIS等格式</p>
+                                </div>
+                                <button id="process-file-btn" class="primary-btn">处理文件</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3><i class="fas fa-filter"></i> 第二步：筛选条件</h3>
+                        <div class="card-content">
+                            <div class="input-group">
+                                <label for="min-publications">最少相关文章数：</label>
+                                <input type="number" id="min-publications" value="1" min="1">
+                            </div>
+                            <div class="input-group">
+                                <label for="zky-quartile">中科院分区要求：</label>
+                                <select id="zky-quartile">
+                                    <option value="all">不限</option>
+                                    <option value="1">1区</option>
+                                    <option value="2" selected>2区及以上</option>
+                                    <option value="3">3区及以上</option>
+                                    <option value="4">4区及以上</option>
+                                </select>
+                            </div>
+                            <div class="button-group">
+                                <button id="apply-filter-btn" class="btn secondary">应用筛选</button>
+                                <button id="reset-filter-btn" class="secondary-btn" style="display:none;">返回全部结果</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="processing-status">
+                    <div id="progress-container" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress"></div>
+                        </div>
+                        <p id="status-text">正在处理...</p>
+                        <div class="loading-note">
+                            获取期刊年发文量数据可能需要较长时间，请耐心等待。
+                            <br>每本期刊需要查询5个年份的数据，为避免API限流，查询速度会较慢。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section" style="display:none;">
+            <div class="container">
+                <div class="results-header">
+                    <h3>检索结果</h3>
+                    <div class="actions">
+                        <button id="export-csv-btn" class="action-btn"><i class="fas fa-file-csv"></i> 导出CSV</button>
+                    </div>
+                </div>
+                
+                <!-- 添加分步骤导出功能 -->
+                <div class="export-steps-panel">
+                    <div class="export-steps-header">
+                        <h4><i class="fas fa-file-export"></i> 分阶段处理</h4>
+                        <p class="help-text">按顺序执行下面的阶段，完成从检索到数据整合的全过程</p>
+                    </div>
+                    <div class="stages-container">
+                        <div class="stage">
+                            <button id="stage1-btn" class="stage-btn active"><i class="fas fa-search"></i> 第一阶段</button>
+                            <p class="stage-desc">检索PubMed文献，获取文献PMID与PUBMED期刊名称的映射关系</p>
+                        </div>
+                        <div class="stage">
+                            <button id="stage2-btn" class="stage-btn"><i class="fas fa-database"></i> 第二阶段</button>
+                            <p class="stage-desc">根据期刊ISSN获取期刊的影响因子和中科院分区</p>
+                        </div>
+                        <div class="stage">
+                            <button id="stage3-btn" class="stage-btn"><i class="fas fa-chart-line"></i> 第三阶段</button>
+                            <p class="stage-desc">采用ISSN获取对应期刊近5年的发文量数据</p>
+                        </div>
+                        <div class="stage">
+                            <button id="stage4-btn" class="stage-btn"><i class="fas fa-file-export"></i> 第四阶段</button>
+                            <p class="stage-desc">将所有数据整合到一个完整的CSV文件中</p>
+                        </div>
+                    </div>
+                    
+                    <div class="export-steps-header">
+                        <h4><i class="fas fa-download"></i> 导出数据</h4>
+                        <p class="help-text">可以导出各阶段的数据</p>
+                    </div>
+                    <div class="button-group">
+                        <button id="export-step1-btn" class="action-btn"><i class="fas fa-file-csv"></i> 导出PMID-期刊映射</button>
+                        <button id="export-step2-btn" class="action-btn"><i class="fas fa-file-csv"></i> 导出期刊指标数据</button>
+                        <button id="export-step3-btn" class="action-btn"><i class="fas fa-file-csv"></i> 导出期刊年发文量</button>
+                        <button id="export-step4-btn" class="action-btn"><i class="fas fa-file-csv"></i> 导出整合数据</button>
+                        <button id="get-yearly-counts-btn" class="action-btn" style="margin-left: auto;"><i class="fas fa-sync"></i> 获取年发文量</button>
+                    </div>
+                </div>
+                
+                <div class="filter-summary">
+                    <p>找到 <span id="journal-count">0</span> 个符合条件的期刊</p>
+                    <div class="quick-filters">
+                        <label>快速排序: </label>
+                        <button class="filter-btn" data-sort="impact">影响因子</button>
+                        <button class="filter-btn" data-sort="publications">文章数量</button>
+                        <button class="filter-btn" data-sort="acceptance">接收率</button>
+                    </div>
+                </div>
+                
+                <div class="journals-container">
+                    <!-- 期刊结果将在这里动态生成 -->
+                    <div id="journals-list">
+                        <!-- 示例期刊卡片 -->
+                        <div class="journal-card">
+                            <div class="journal-header">
+                                <h4>The Lancet</h4>
+                                <div class="journal-quartiles">
+                                    <span class="zky-badge zky-1" title="中科院分区">中科院1区</span>
+                                </div>
+                            </div>
+                            <div class="journal-metrics">
+                                <div class="metric">
+                                    <span class="metric-value">202.731</span>
+                                    <span class="metric-label">影响因子</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-value">145</span>
+                                    <span class="metric-label">文章数</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-value">4-8周</span>
+                                    <span class="metric-label">审稿周期</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-value">~5%</span>
+                                    <span class="metric-label">接收率</span>
+                                </div>
+                            </div>
+                            <div class="disease-tags">
+                                <span class="disease-tag">脑卒中</span>
+                                <span class="disease-tag">COPD</span>
+                                <span class="disease-tag">痴呆</span>
+                            </div>
+                            <div class="representative-papers">
+                                <h5>代表性文章</h5>
+                                <ul>
+                                    <li>
+                                        <a href="#" target="_blank">Global, regional, and national burden of stroke, 1990-2019</a>
+                                        <span class="paper-citation">引用: 1250</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>期刊检索工具 © 2025</p>
+            <p>本工具仅供学术参考，数据来源于公开数据库</p>
+            <div class="admin-toggle">
+                <a href="#" id="toggle-admin">期刊映射管理</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 期刊映射管理面板（默认隐藏） -->
+    <div id="admin-panel" class="admin-panel" style="display:none;">
+        <div class="admin-panel-content">
+            <h3>期刊映射管理</h3>
+            <p>查看或修改PubMed期刊名与标准期刊名的映射关系</p>
+            
+            <div class="admin-controls">
+                <div class="admin-search">
+                    <input type="text" id="mapping-search" placeholder="搜索期刊名称...">
+                </div>
+                <div class="admin-actions">
+                    <button id="add-mapping" class="admin-btn">添加映射</button>
+                    <button id="import-mapping" class="admin-btn">批量导入</button>
+                    <button id="export-mapping" class="admin-btn">导出映射</button>
+                    <button id="close-admin" class="admin-btn">关闭</button>
+                </div>
+            </div>
+            
+            <div class="mapping-container">
+                <table id="mapping-table">
+                    <thead>
+                        <tr>
+                            <th>PubMed期刊名</th>
+                            <th>标准期刊名</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-tbody">
+                        <!-- 映射数据将在这里动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 新增/编辑映射的弹窗 -->
+            <div id="mapping-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h4>编辑期刊映射</h4>
+                    <div class="form-group">
+                        <label for="pubmed-name">PubMed期刊名:</label>
+                        <input type="text" id="pubmed-name">
+                    </div>
+                    <div class="form-group">
+                        <label for="standard-name">标准期刊名:</label>
+                        <input type="text" id="standard-name">
+                    </div>
+                    <button id="save-mapping" class="admin-btn">保存</button>
+                </div>
+            </div>
+            
+            <!-- 批量导入映射的弹窗 -->
+            <div id="import-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close-import">&times;</span>
+                    <h4>批量导入期刊映射</h4>
+                    <p>选择一个CSV文件，格式为: PubMedName,StandardName</p>
+                    <div class="form-group">
+                        <input type="file" id="import-file" accept=".csv">
+                    </div>
+                    <div class="import-options">
+                        <label>
+                            <input type="checkbox" id="replace-existing" checked>
+                            替换已存在的映射关系
+                        </label>
+                    </div>
+                    <div class="preview-container" style="display:none;">
+                        <h5>预览 (共<span id="preview-count">0</span>条记录)</h5>
+                        <div class="preview-table-wrapper">
+                            <table id="preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>PubMed期刊名</th>
+                                        <th>标准期刊名</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preview-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="import-actions">
+                        <button id="confirm-import" class="admin-btn" disabled>导入</button>
+                        <button class="admin-btn cancel-import">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+    /* 管理面板样式 */
+    .admin-toggle {
+        margin-top: 10px;
+        font-size: 0.8em;
+    }
+    
+    .admin-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.7);
+        z-index: 1000;
+        overflow: auto;
+    }
+    
+    .admin-panel-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 20px;
+        width: 80%;
+        max-width: 1000px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .admin-controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    
+    .admin-search input {
+        padding: 8px 12px;
+        width: 300px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .admin-btn {
+        padding: 8px 15px;
+        background-color: #0066CC;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 5px;
+    }
+    
+    .mapping-container {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #mapping-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    #mapping-table th, #mapping-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    #mapping-table th {
+        background-color: #f5f5f5;
+        position: sticky;
+        top: 0;
+    }
+    
+    .edit-btn, .delete-btn {
+        padding: 4px 8px;
+        margin-right: 5px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    
+    .delete-btn {
+        background-color: #f44336;
+    }
+    
+    /* 模态框样式 */
+    .modal {
+        position: fixed;
+        z-index: 1001;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        width: 50%;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    
+    .close {
+        float: right;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    /* 批量导入相关样式 */
+    .preview-container {
+        margin: 15px 0;
+        border: 1px solid #eee;
+        padding: 10px;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+    }
+    
+    .preview-table-wrapper {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 10px;
+    }
+    
+    #preview-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    #preview-table th, #preview-table td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    #preview-table th {
+        background-color: #f0f0f0;
+        position: sticky;
+        top: 0;
+    }
+    
+    .import-options {
+        margin: 15px 0;
+    }
+    
+    .import-actions {
+        margin-top: 15px;
+        text-align: right;
+    }
+    
+    /* 分区徽章样式 */
+    .journal-quartiles {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .zky-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: white;
+    }
+    
+    /* 中科院分区颜色区分 */
+    .zky-badge.zky-1 {
+        background-color: #9c27b0; /* 紫色 */
+    }
+    
+    .zky-badge.zky-2 {
+        background-color: #2196f3; /* 蓝色 */
+    }
+    
+    .zky-badge.zky-3 {
+        background-color: #4caf50; /* 绿色 */
+    }
+    
+    .zky-badge.zky-4 {
+        background-color: #ff9800; /* 橙色 */
+    }
+    
+    /* 按钮组样式 */
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script>
+      // 初始化期刊映射对象
+      window.ifMap = {};
+      window.qMap = {};
+      window.zkyMap = {}; // 新增：中科院分区映射
+      window.journalNameMap = {}; // 新增：PubMed期刊名到标准名称的映射
+      
+      // 先用基础数据进行初始化
+      window.qMap = {
+        'THE LANCET': 'Q1',
+        'THE NEW ENGLAND JOURNAL OF MEDICINE': 'Q1',
+        'JAMA': 'Q1',
+        'BMJ': 'Q1',
+        'NATURE MEDICINE': 'Q1',
+        'LANCET GLOBAL HEALTH': 'Q1',
+        'PLOS MEDICINE': 'Q1',
+        'BMC MEDICINE': 'Q1',
+        'INTERNATIONAL JOURNAL OF EPIDEMIOLOGY': 'Q1',
+        'JOURNAL OF CLINICAL EPIDEMIOLOGY': 'Q2',
+        'FRONTIERS IN PUBLIC HEALTH': 'Q2'
+      };
+      
+      window.ifMap = {
+        'THE LANCET': 202.731,
+        'THE NEW ENGLAND JOURNAL OF MEDICINE': 176.079,
+        'JAMA': 157.335,
+        'BMJ': 39.890,
+        'NATURE MEDICINE': 87.241,
+        'LANCET GLOBAL HEALTH': 26.763,
+        'PLOS MEDICINE': 11.069,
+        'BMC MEDICINE': 9.264,
+        'INTERNATIONAL JOURNAL OF EPIDEMIOLOGY': 10.323,
+        'JOURNAL OF CLINICAL EPIDEMIOLOGY': 7.803,
+        'FRONTIERS IN PUBLIC HEALTH': 3.0
+      };
+      
+      // 添加常见期刊映射
+      window.journalNameMap = {
+        'frontiers in public health': 'FRONTIERS IN PUBLIC HEALTH'
+      };
+      
+      // 加载期刊名称映射文件
+      fetch("journal_mapping.csv")
+        .then(r => r.text())
+        .then(txt => {
+          const data = Papa.parse(txt, { header: true }).data;
+          data.forEach(row => {
+            if (!row.PubMedName || !row.StandardName) return; // 跳过无效行
+            // 统一用小写作为key便于查找
+            const pubmedName = row.PubMedName.trim().toLowerCase();
+            const stdName = row.StandardName.trim();
+            window.journalNameMap[pubmedName] = stdName;
+          });
+          console.log("期刊名称映射数据加载完成，共加载", Object.keys(window.journalNameMap).length, "条记录");
+        })
+        .catch(err => {
+          console.error("加载期刊名称映射数据出错:", err);
+        });
+      
+      // 加载 CSV 增强数据
+      fetch("journal_if.csv")
+        .then(r => r.text())
+        .then(txt => {
+          const data = Papa.parse(txt, { header: true }).data;
+          data.forEach(row => {
+            if (!row.Title) return; // 跳过空行
+            // 统一用大写当key
+            const t = (row.Title || "").trim().toUpperCase();
+            const f = parseFloat(row.IF) || "";
+            const zky = row.zky || ""; // 读取中科院分区数据（数字1-4）
+            if (t) {
+              window.ifMap[t] = f;
+              window.zkyMap[t] = zky; // 存储中科院分区（不需要转换）
+            }
+          });
+          console.log("期刊指标数据加载完成，共加载", Object.keys(window.ifMap).length, "条记录");
+        })
+        .catch(err => {
+          console.error("加载期刊指标数据出错:", err);
+        });
+      
+      // 辅助函数：将PubMed期刊名标准化为IF映射表使用的格式
+      window.standardizeJournalName = function(journalName) {
+        if (!journalName) return "";
+        
+        // 转为小写方便查找映射
+        const lowerName = journalName.toLowerCase().trim();
+        
+        // 1. 首先尝试从映射表中查找精确匹配
+        if (window.journalNameMap[lowerName]) {
+          console.log(`期刊名精确匹配: "${journalName}" -> "${window.journalNameMap[lowerName]}"`);
+          return window.journalNameMap[lowerName].toUpperCase();
+        }
+        
+        // 2. 如果没有精确匹配，直接返回原名的大写形式
+        console.log(`期刊名无映射: "${journalName}"`);
+        return journalName.toUpperCase();
+      };
+    </script>
+
+    <script src="data-processor.js"></script>
+    <script src="api-service.js"></script>
+    <script src="export-service.js"></script>
+    <script src="scripts.js"></script>
+</body>
+</html> 
